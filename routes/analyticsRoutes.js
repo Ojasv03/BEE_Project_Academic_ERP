@@ -1,9 +1,12 @@
-const Attendance = require('./model/Attendance');
-const Marks = require('./model/Marks');   
-const User = require('./model/User');  
+const express = require('express');
+const Attendance = require('../model/Attendance');
+const Marks = require('../model/Marks');   
+const User = require('../model/User');  
 const mongoose = require('mongoose');
 
-app.get('/analytics/teacher/:teacherId', async (req, res) => {
+const router = express.Router();
+
+router.get('/analytics/teacher/:teacherId', async (req, res) => {
     try {
         const teacherId = req.params.teacherId;
         const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -107,3 +110,6 @@ app.get('/analytics/teacher/:teacherId', async (req, res) => {
         res.status(500).json({ error: 'Failed to compute analytics', details: err.message });
     }
 });
+
+
+module.exports = router;
