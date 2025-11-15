@@ -2,24 +2,50 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "@/utils/api";
+import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
   const [mode, setMode] = useState("signin");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const toggleMode = (next) => setMode(next);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  // simulate network delay
-  setTimeout(() => {
+    const formData = new FormData(e.target);
+
+    const payload = {
+      fullName: formData.get("fullName"),
+      email: formData.get("email"),
+      password: formData.get("password"),
+    };
+
+    try {
+      let res;
+
+      if (mode === "signin") {
+        res = await api.post("/auth/login", {
+          email: payload.email,
+          password: payload.password,
+        });
+      } else {
+        res = await api.post("/auth/signup", payload);
+      }
+
+      localStorage.setItem("loginEmail", payload.email);
+
+      router.push("/otp");
+    } catch (err) {
+      console.log(err);
+      alert(err.response?.data?.message || "Something went wrong");
+    }
+
     setLoading(false);
-    alert(`${mode === "signin" ? "Signed in" : "Signed up"} (demo)`);
-  }, 1000);
-};
-
+  };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 30, scale: 0.98 },
@@ -35,15 +61,15 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen relative flex items-center justify-center bg-gradient-to-br from-[#020611] via-[#0a1124] to-[#091f44] overflow-hidden">
-      
-      {/* Background fade/blur animation */}
+
+      {/* BG animation */}
       <motion.div
         className="absolute w-[40rem] h-[40rem] rounded-full bg-gradient-to-r from-[#0a2e6f] to-[#1f5eff] opacity-20 blur-3xl"
         animate={{ x: [0, 40, 0], y: [0, -20, 0], scale: [1, 1.1, 1] }}
         transition={{ duration: 10, repeat: Infinity, repeatType: "mirror" }}
       />
 
-      {/* Logo with blur animation */}
+      {/* LOGO */}
       <motion.div
         className="absolute top-10 text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400"
         animate={{ filter: ["blur(0px)", "blur(4px)", "blur(0px)"], opacity: [1, 0.8, 1] }}
@@ -52,6 +78,7 @@ export default function AuthPage() {
         ClassSync
       </motion.div>
 
+      {/* Card */}
       <motion.div
         initial="hidden"
         animate="visible"
@@ -68,7 +95,7 @@ export default function AuthPage() {
           </p>
         </div>
 
-        {/* Toggle buttons */}
+        {/* TOGGLE BUTTONS */}
         <div className="flex justify-center mb-6 space-x-3">
           <button
             onClick={() => toggleMode("signin")}
@@ -80,6 +107,7 @@ export default function AuthPage() {
           >
             Sign In
           </button>
+
           <button
             onClick={() => toggleMode("signup")}
             className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
@@ -92,7 +120,7 @@ export default function AuthPage() {
           </button>
         </div>
 
-        {/* Animated form */}
+        {/* FORM */}
         <AnimatePresence mode="wait" custom={mode === "signin" ? 1 : -1}>
           {mode === "signin" ? (
             <motion.form
@@ -108,15 +136,18 @@ export default function AuthPage() {
               <div>
                 <label className="block text-sm text-white/80 mb-2">Email</label>
                 <input
+                  name="email"
                   type="email"
                   required
                   placeholder="you@classsync.com"
                   className="w-full rounded-xl px-4 py-3 bg-black/30 border border-white/10 text-white placeholder-white/40 focus:ring-2 focus:ring-blue-500/40 outline-none"
                 />
               </div>
+
               <div>
                 <label className="block text-sm text-white/80 mb-2">Password</label>
                 <input
+                  name="password"
                   type="password"
                   required
                   placeholder="••••••••"
@@ -146,24 +177,29 @@ export default function AuthPage() {
               <div>
                 <label className="block text-sm text-white/80 mb-2">Full Name</label>
                 <input
+                  name="fullName"
                   type="text"
                   required
                   placeholder="John Doe"
                   className="w-full rounded-xl px-4 py-3 bg-black/30 border border-white/10 text-white placeholder-white/40 focus:ring-2 focus:ring-blue-500/40 outline-none"
                 />
               </div>
+
               <div>
                 <label className="block text-sm text-white/80 mb-2">Email</label>
                 <input
+                  name="email"
                   type="email"
                   required
                   placeholder="you@classsync.com"
                   className="w-full rounded-xl px-4 py-3 bg-black/30 border border-white/10 text-white placeholder-white/40 focus:ring-2 focus:ring-blue-500/40 outline-none"
                 />
               </div>
+
               <div>
                 <label className="block text-sm text-white/80 mb-2">Password</label>
                 <input
+                  name="password"
                   type="password"
                   required
                   placeholder="••••••••"
@@ -182,7 +218,6 @@ export default function AuthPage() {
           )}
         </AnimatePresence>
 
-        {/* Bottom toggle */}
         <div className="mt-6 text-center">
           <p className="text-sm text-white/70">
             {mode === "signin" ? "Don't have an account?" : "Already a user?"}{" "}
