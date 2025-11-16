@@ -14,7 +14,6 @@ router.get('/teacher/:teacherId', protect,allowRoles("teacher"),async (req, res)
         const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const to = req.query.to ? new Date(req.query.to) : new Date();
 
-        // Attendance aggregation (uses markedBy)
         const attendanceAgg = await Attendance.aggregate([
             {
                 $match: {
@@ -39,7 +38,6 @@ router.get('/teacher/:teacherId', protect,allowRoles("teacher"),async (req, res)
             }
         ]);
 
-        // Marks aggregation (uses uploadedBy)
         const marksAgg = await Marks.aggregate([
             {
                 $match: {
@@ -58,7 +56,6 @@ router.get('/teacher/:teacherId', protect,allowRoles("teacher"),async (req, res)
             }
         ]);
 
-        // Merge data
         const byStudentMap = {};
         attendanceAgg.forEach(a => {
             byStudentMap[String(a.studentId)] = {
@@ -75,7 +72,6 @@ router.get('/teacher/:teacherId', protect,allowRoles("teacher"),async (req, res)
             byStudentMap[sid].avgMarks = m.avgMarks ? Number(m.avgMarks.toFixed(2)) : null;
         });
 
-        // Fetch student info
         const studentIds = Object.keys(byStudentMap).map(id => byStudentMap[id].studentId);
         const students = await User.find({ _id: { $in: studentIds }, role: 'student' }).select('name email batch');
         const studentById = {};
@@ -92,7 +88,6 @@ router.get('/teacher/:teacherId', protect,allowRoles("teacher"),async (req, res)
             totalSessions: item.total || 0
         }));
 
-        // Compute overall stats
         const overallAttendance = perStudent.length
             ? (perStudent.reduce((s, x) => s + Number(x.attendancePercent), 0) / perStudent.length)
             : 0;

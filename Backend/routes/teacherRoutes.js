@@ -24,21 +24,20 @@ router.get('/students', protect, allowRoles("teacher"), async (req, res) => {
   }
 });
 
-// Mark attendance (save in Attendance collection)
+// Mark attendance 
 router.post('/attendance', protect, allowRoles("teacher"), async (req, res) => {
   try {
     const { studentEmail, status } = req.body;
     const student = await User.findOne({ email: studentEmail, role: 'student' });
     if (!student) return res.status(404).json({ message: 'Student not found' });
 
-    // Save in Attendance collection
     const attendance = await Attendance.create({
       student: student._id,
       markedBy: req.user._id,
       status
     });
 
-    // Socket notification
+    // Socket 
     req.io.to('student').emit('notification', {
       message: `📅 Attendance updated for today`,
       type: "attendance"
@@ -51,7 +50,7 @@ router.post('/attendance', protect, allowRoles("teacher"), async (req, res) => {
   }
 });
 
-// Upload marks (save in Marks collection)
+// Upload marks 
 router.post('/marks', protect, allowRoles("teacher"), async (req, res) => {
   try {
     const { studentEmail, subject, marks } = req.body;
@@ -69,7 +68,7 @@ router.post('/marks', protect, allowRoles("teacher"), async (req, res) => {
       uploadedBy: req.user._id
     });
 
-    // Socket notification
+    // Socket 
     req.io.to('student').emit('notification', {
       message: `📝 New marks uploaded`,
       type: "marks"

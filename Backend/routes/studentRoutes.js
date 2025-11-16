@@ -11,13 +11,11 @@ const router = express.Router();
 // student dashboard
 router.get('/', protect, allowRoles("student"), async (req, res) => {
   try {
-    // Fetch student basic info
     const student = await User.findById(req.user._id).select('name email batch role');
     if (!student) {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    // Fetch attendance records from Attendance collection
     const attendanceRecords = await Attendance.find({ student: req.user._id })
       .select('date status')
       .sort({ date: -1 });
@@ -28,7 +26,6 @@ router.get('/', protect, allowRoles("student"), async (req, res) => {
       attendanceObj[date] = record.status;
     });
 
-    // Fetch marks records from Marks collection
     const marksRecords = await Marks.find({ student: req.user._id })
       .select('subject marks')
       .sort({ date: -1 });
@@ -38,7 +35,6 @@ router.get('/', protect, allowRoles("student"), async (req, res) => {
       marksObj[record.subject] = record.marks;
     });
 
-    // Fetch notices
     const notices = await Notice.find().sort({ date: -1 });
     const updatesObj = {};
     notices.forEach((record, index) => {

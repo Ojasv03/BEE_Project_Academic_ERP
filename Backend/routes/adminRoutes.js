@@ -40,7 +40,6 @@ router.post("/notice", protect,allowRoles("admin"), async (req, res) => {
       return res.status(400).json({ message: "Title and content are required" });
     }
 
-    // Save notice in DB
     const notice = new Notice({
       title,
       content,
@@ -48,7 +47,6 @@ router.post("/notice", protect,allowRoles("admin"), async (req, res) => {
     });
     await notice.save();
 
-    // ✅ Emit a short real-time notification
     const io = req.app.get("io");
     io.emit("new-notice", {
       message: "🆕 New notice posted",

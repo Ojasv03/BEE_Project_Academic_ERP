@@ -44,11 +44,6 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve frontend analytics page
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'analytics.html'));
-});
-
 // Routes
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
@@ -61,7 +56,6 @@ app.use('/analytics', analyticsRoutes);
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
 
-    // role registration from frontend
     socket.on('registerRole', (data) => {
         if (data && data.role) {
             socket.join(data.role);
