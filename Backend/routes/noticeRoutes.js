@@ -1,11 +1,12 @@
 const express = require('express');
 const Notice = require('../model/Notice');
-const admin = require('../middleware/adminMiddleware');
+const allowRoles = require('../middleware/roleMiddleware');
+const protect = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 // new notice
-router.post('/add', admin, async (req, res) => {
+router.post('/add', protect,allowRoles("admin"), async (req, res) => {
   try {
     const { title, description } = req.body;
 

@@ -3,10 +3,12 @@ const Attendance = require('../model/Attendance');
 const Marks = require('../model/Marks');   
 const User = require('../model/User');  
 const mongoose = require('mongoose');
+const protect = require('../middleware/authMiddleware');
+const allowRoles = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
-router.get('/teacher/:teacherId', async (req, res) => {
+router.get('/teacher/:teacherId', protect,allowRoles("teacher"),async (req, res) => {
     try {
         const teacherId = req.params.teacherId;
         const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

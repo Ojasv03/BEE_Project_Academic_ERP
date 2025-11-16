@@ -1,19 +1,19 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const User = require('../model/User');
-const teacherOnly = require('../middleware/teacherMiddleware');
 const Attendance = require('../model/Attendance');
 const Marks = require('../model/Marks');
+const protect = require('../middleware/authMiddleware');
+const allowRoles = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
-// dashboard
-router.get('/', teacherOnly, async (req, res) => {
+// Teacher dashboard
+router.get('/', protect, allowRoles("teacher"), async (req, res) => {
   res.json({ message: `Welcome to your Teacher Dashboard, ${req.user.name}!` });
 });
 
-// student list 
-router.get('/students', teacherOnly, async (req, res) => {
+// Student list
+router.get('/students', protect, allowRoles("teacher"), async (req, res) => {
   try {
     const students = await User.find({ role: 'student' })
       .select('name email batch'); 
@@ -24,34 +24,39 @@ router.get('/students', teacherOnly, async (req, res) => {
   }
 });
 
-// mark attendance
-router.post('/attendance', teacherOnly, async (req, res) => {
-  const { studentEmail, status } = req.body;
+// Mark attendance (save in Attendance collection)
+router.post('/attendance', protect, allowRoles("teacher"), async (req, res) => {
+  try {
+    const { studentEmail, status } = req.body;
+    const student = await User.findOne({ email: studentEmail, role: 'student' });
+    if (!student) return res.status(404).json({ message: 'Student not found' });
 
-  const student = await User.findOne({ email: studentEmail, role: 'student' });
-  if (!student) {
-    return res.status(404).json({ message: 'Student not found' });
+    // Save in Attendance collection
+    const attendance = await Attendance.create({
+      student: student._id,
+      markedBy: req.user._id,
+      status
+    });
+
+    // Socket notification
+    req.io.to('student').emit('notification', {
+      message: `📅 Attendance updated for today`,
+      type: "attendance"
+    });
+
+    res.json({ message: 'Attendance marked', attendance });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
-
-  if (!student.attendance) student.attendance = [];
-  student.attendance.push({ date: new Date(), status });
-  await student.save();
-
-  // socket concept
-  req.io.to('student').emit('notification', {
-    message: `📅 Attendance updated for today`,
-  });
-
-  res.json({ message: 'Attendance marked', student });
 });
 
-
-// upload marks 
-router.post('/marks', teacherOnly, async (req, res) => {
+// Upload marks (save in Marks collection)
+router.post('/marks', protect, allowRoles("teacher"), async (req, res) => {
   try {
     const { studentEmail, subject, marks } = req.body;
     if (!studentEmail || !subject || marks == null) {
-      return res.status(400).json({ message: 'studentEmail, subject and marks are required' });
+      return res.status(400).json({ message: 'studentEmail, subject, and marks required' });
     }
 
     const student = await User.findOne({ email: studentEmail, role: 'student' });
@@ -62,6 +67,12 @@ router.post('/marks', teacherOnly, async (req, res) => {
       subject,
       marks: Number(marks),
       uploadedBy: req.user._id
+    });
+
+    // Socket notification
+    req.io.to('student').emit('notification', {
+      message: `📝 New marks uploaded`,
+      type: "marks"
     });
 
     res.json({ message: 'Marks added', marks: marksDoc });

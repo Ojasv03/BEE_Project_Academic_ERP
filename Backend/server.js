@@ -5,6 +5,7 @@ const path = require('path');
 const connectDB = require('./db/connectDB');
 const http = require('http');
 const { Server } = require('socket.io');
+const cors = require("cors");
 
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -22,7 +23,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*",  
+        origin: "http://localhost:3000",  
         credentials: true
     }
 });
@@ -31,6 +32,12 @@ app.use((req, res, next) => {
     req.io = io;
     next();
 });
+
+
+app.use(cors({
+    origin: "http://localhost:3000",  
+    credentials: true
+}));
 
 // Middleware
 app.use(express.json());
