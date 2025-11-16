@@ -5,26 +5,71 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FiUser, FiCalendar, FiBook, FiBell } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import api from "@/utils/api";
+import { io } from "socket.io-client";
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [student, setStudent] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [notices, setNotices] = useState([]);
   const router = useRouter();
 
+  // Fetch student info
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await api.get("/student"); 
+        const res = await api.get("/student");
         setStudent(res.data.student);
       } catch (err) {
         console.error("Student fetch error:", err);
         if (err.response && err.response.status === 401) {
-          router.push("/"); 
+          router.push("/");
         }
       }
     }
     loadData();
   }, [router]);
+
+  // Fetch notices from DB
+  useEffect(() => {
+    async function loadNotices() {
+      try {
+        const res = await api.get("/notices");
+        setNotices(res.data.notices || []);
+      } catch (err) {
+        console.error("Notices fetch error:", err);
+        setNotices([]);
+      }
+    }
+    loadNotices();
+  }, []);
+
+  // Socket for live notifications
+  useEffect(() => {
+    const socket = io("http://localhost:5000");
+    socket.emit("registerRole", { role: "student" });
+
+    socket.on("notification", (data) => {
+      // Show toast notification
+      setNotifications((prev) => [...prev, data.message]);
+      setTimeout(() => {
+        setNotifications((prev) => prev.filter((msg) => msg !== data.message));
+      }, 5000);
+
+      // Update notices tab automatically
+      async function fetchNewNotices() {
+        try {
+          const res = await api.get("/notices");
+          setNotices(res.data.notices || []);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      fetchNewNotices();
+    });
+
+    return () => socket.disconnect();
+  }, []);
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: <FiUser size={18} /> },
@@ -36,22 +81,18 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen flex bg-[#0a0f14] text-white">
 
-      {/* SIDEBAR */}
+      {/* Sidebar */}
       <aside className="w-64 bg-black/30 backdrop-blur-xl border-r border-white/10 p-6 flex flex-col">
-        <h2 className="text-2xl font-bold mb-10 text-green-400 tracking-wide">
-          Student Panel
-        </h2>
-
+        <h2 className="text-2xl font-bold mb-10 text-green-400 tracking-wide">Student Panel</h2>
         <nav className="space-y-2">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition ${
-                activeTab === t.id
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition ${activeTab === t.id
                   ? "bg-green-600/90 shadow-md"
                   : "bg-white/5 hover:bg-white/10"
-              }`}
+                }`}
             >
               {t.icon}
               <span>{t.label}</span>
@@ -60,8 +101,8 @@ export default function StudentDashboard() {
         </nav>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 p-10">
+      {/* Main */}
+      <main className="flex-1 p-10 relative">
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-green-400 drop-shadow-lg">
             Welcome, {student?.name || "Loading..."}
@@ -71,8 +112,21 @@ export default function StudentDashboard() {
           </p>
         </header>
 
+        {/* Notification Toasts */}
+        <div className="fixed bottom-4 right-4 space-y-2 z-50">
+          {notifications.map((msg, idx) => (
+            <div
+              key={idx}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg"
+            >
+              {msg}
+            </div>
+          ))}
+        </div>
+
+
         <AnimatePresence mode="wait">
-          {/* DASHBOARD TAB */}
+          {/* Dashboard */}
           {activeTab === "dashboard" && (
             <motion.div
               key="dashboard"
@@ -104,7 +158,7 @@ export default function StudentDashboard() {
             </motion.div>
           )}
 
-          {/* ATTENDANCE TAB */}
+          {/* Attendance */}
           {activeTab === "attendance" && (
             <motion.div
               key="attendance"
@@ -127,11 +181,8 @@ export default function StudentDashboard() {
                       Object.entries(student.attendance).map(([date, status]) => (
                         <tr key={date} className="hover:bg-white/5 transition">
                           <td className="p-3 border border-white/10">{date}</td>
-                          <td
-                            className={`p-3 border border-white/10 font-semibold ${
-                              status === "present" ? "text-green-400" : "text-red-400"
-                            }`}
-                          >
+                          <td className={`p-3 border border-white/10 font-semibold ${status === "present" ? "text-green-400" : "text-red-400"
+                            }`}>
                             {status}
                           </td>
                         </tr>
@@ -142,7 +193,7 @@ export default function StudentDashboard() {
             </motion.div>
           )}
 
-          {/* MARKS TAB */}
+          {/* Marks */}
           {activeTab === "marks" && (
             <motion.div
               key="marks"
@@ -174,7 +225,7 @@ export default function StudentDashboard() {
             </motion.div>
           )}
 
-          {/* UPDATES TAB */}
+          {/* Updates / Notices */}
           {activeTab === "updates" && (
             <motion.div
               key="updates"
@@ -183,22 +234,24 @@ export default function StudentDashboard() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-4"
             >
-              {student?.updates &&
-                Object.values(student.updates).map((update, idx) => (
+              {notices.length === 0 ? (
+                <p className="text-white/60">No notices yet.</p>
+              ) : (
+                notices.map((n) => (
                   <motion.div
-                    key={idx}
+                    key={n._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1 }}
+                    transition={{ delay: 0 }}
                     className="bg-white/5 backdrop-blur-xl border border-white/10 p-5 rounded-xl shadow-xl"
                   >
-                    <h3 className="text-lg font-semibold text-green-300">{update.title}</h3>
-                    <p className="text-white/70 mt-1">{update.content}</p>
+                    <h3 className="text-lg font-semibold text-green-300">{n.title}</h3>
+                    <p className="text-white/70 mt-1">{n.description}</p>
                   </motion.div>
-                ))}
+                ))
+              )}
             </motion.div>
           )}
-
         </AnimatePresence>
       </main>
     </div>
