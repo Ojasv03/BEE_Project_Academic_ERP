@@ -10,8 +10,8 @@ export default function TeacherDashboard() {
   const [teacher, setTeacher] = useState(null);
   const [students, setStudents] = useState([]);
   const [notices, setNotices] = useState([]);
-  const [subjectInput, setSubjectInput] = useState(""); // For marks upload
-  const [marksInput, setMarksInput] = useState({}); // { studentEmail: mark }
+  const [subjectInput, setSubjectInput] = useState(""); 
+  const [marksInput, setMarksInput] = useState({}); 
 
   useEffect(() => {
     async function loadData() {

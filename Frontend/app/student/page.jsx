@@ -30,7 +30,7 @@ export default function StudentDashboard() {
     loadData();
   }, [router]);
 
-  // Fetch notices from DB
+  // Fetch notices 
   useEffect(() => {
     async function loadNotices() {
       try {
@@ -50,13 +50,11 @@ export default function StudentDashboard() {
     socket.emit("registerRole", { role: "student" });
 
     socket.on("notification", (data) => {
-      // Show toast notification
       setNotifications((prev) => [...prev, data.message]);
       setTimeout(() => {
         setNotifications((prev) => prev.filter((msg) => msg !== data.message));
       }, 5000);
 
-      // Update notices tab automatically
       async function fetchNewNotices() {
         try {
           const res = await api.get("/notices");
